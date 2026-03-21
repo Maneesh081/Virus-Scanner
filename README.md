@@ -33,13 +33,7 @@ A browser extension that automatically scans downloaded files for malware.
 2. Extract files
 3. Load unpacked as above
 
-## Publishing to GitHub
 
-1. Go to https://github.com and sign in
-2. Click **New repository**
-3. Name it `virus-scanner`
-4. Upload all files from `browser_extension/`
-5. Share the link with friends
 
 ## For Friends to Install from GitHub:
 1. Clone or download the repo
