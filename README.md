@@ -33,14 +33,6 @@ A browser extension that automatically scans downloaded files for malware.
 2. Extract files
 3. Load unpacked as above
 
-
-
-## For Friends to Install from GitHub:
-1. Clone or download the repo
-2. Go to `chrome://extensions/`
-3. Enable Developer mode
-4. Load unpacked → select folder
-
 ## Files
 
 - `browser_extension/` - Chrome/Edge extension files
