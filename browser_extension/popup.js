@@ -10,61 +10,40 @@ function setupListeners() {
     document.getElementById('quickScan').addEventListener('click', quickScan);
     document.getElementById('scanAll').addEventListener('click', scanAll);
     document.getElementById('clearHistory').addEventListener('click', clearHistory);
-    
-    document.getElementById('autoScan').addEventListener('click', (e) => {
-        e.target.classList.toggle('active');
-        saveSettings();
-    });
-    
-    document.getElementById('notifications').addEventListener('click', (e) => {
-        e.target.classList.toggle('active');
-        saveSettings();
-    });
 }
 
 async function loadHistory() {
     const history = await chrome.runtime.sendMessage({ action: 'getHistory' }) || [];
     const listEl = document.getElementById('historyList');
+    
+    if (history.length === 0) {
+        listEl.innerHTML = '<div class="empty">no files scanned</div>';
+        return;
+    }
+    
     listEl.innerHTML = '';
     
-    history.slice(0, 8).forEach(item => {
-        const div = document.createElement('div');
+    history.forEach(item => {
         const result = item.result || {};
         const riskScore = result.risk_score || 0;
+        const time = item.timestamp ? formatTime(item.timestamp) : '';
         
-        // Determine safety level based on risk score
-        let safetyLevel, safetyClass, reason;
-        if (riskScore >= 60) {
-            safetyLevel = 'Dangerous';
-            safetyClass = 'danger';
-            reason = result.findings && result.findings.length > 0 
-                ? result.findings.map(f => f.category).join(', ') 
-                : 'High risk file type detected';
-        } else if (riskScore >= 30) {
-            safetyLevel = 'Moderate';
-            safetyClass = 'warning';
-            reason = 'Risky file extension or suspicious source';
-        } else {
-            safetyLevel = 'Safe';
-            safetyClass = 'clean';
-            reason = 'No suspicious patterns found';
-        }
+        let safetyClass;
+        if (riskScore >= 60) safetyClass = 'danger';
+        else if (riskScore >= 30) safetyClass = 'warning';
+        else safetyClass = 'safe';
         
+        const div = document.createElement('div');
         div.className = `history-item ${safetyClass}`;
         
-        const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '';
-        
         div.innerHTML = `
-            <div class="filename">${escapeHtml(item.filename || 'Unknown')}</div>
-            <div class="explanation">
-                <span class="safety-badge ${safetyClass}">${safetyLevel}</span>
-                ${reason}
-            </div>
+            <div class="filename">${escapeHtml(item.filename || 'unknown')}</div>
             <div class="meta">
-                <span>Risk: ${riskScore}%</span>
+                <span>[${safetyClass.toUpperCase()}] ${riskScore}%</span>
                 <span>${time}</span>
             </div>
         `;
+        
         listEl.appendChild(div);
     });
 }
@@ -78,49 +57,53 @@ async function loadStats() {
 
 async function quickScan() {
     const btn = document.getElementById('quickScan');
-    btn.textContent = 'Scanning...';
+    btn.textContent = 'scanning...';
     btn.disabled = true;
     
     await chrome.runtime.sendMessage({ action: 'quickScan' });
     
     setTimeout(() => {
-        btn.textContent = 'Quick Scan';
+        btn.textContent = 'scan --latest';
         btn.disabled = false;
         loadHistory();
         loadStats();
-    }, 1500);
+    }, 1000);
 }
 
 async function scanAll() {
     const btn = document.getElementById('scanAll');
-    btn.textContent = 'Scanning...';
+    btn.textContent = 'scanning...';
     btn.disabled = true;
     
     await chrome.runtime.sendMessage({ action: 'scanAll' });
     
     setTimeout(() => {
-        btn.textContent = 'Scan All Downloads';
+        btn.textContent = 'scan --all';
         btn.disabled = false;
         loadHistory();
         loadStats();
-    }, 3000);
+    }, 2000);
 }
 
 async function clearHistory() {
     await chrome.runtime.sendMessage({ action: 'clearHistory' });
-    await chrome.storage.local.set({ stats: { total: 0, clean: 0, threats: 0 } });
     loadHistory();
     loadStats();
-}
-
-function saveSettings() {
-    const autoScan = document.getElementById('autoScan').classList.contains('active');
-    const notif = document.getElementById('notifications').classList.contains('active');
-    chrome.storage.local.set({ settings: { autoScan, showNotifications: notif } });
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+    return Math.floor(diff / 86400000) + 'd';
 }

@@ -6,317 +6,222 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        :root {
+            --bg: #1a1a1a;
+            --card: #242424;
+            --border: #333;
+            --text: #b0b0b0;
+            --text-dim: #666;
+            --accent: #666;
+            --safe: #4CAF50;
+            --warning: #FF9800;
+            --danger: #f44336;
+        }
+        
         body {
             width: 320px;
-            min-height: 400px;
-            background: linear-gradient(180deg, #0a0a0a 0%, #141414 100%);
-            color: #e0e0e0;
-            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 11px;
+        }
+        
+        .terminal {
+            padding: 8px;
         }
         
         .header {
-            padding: 14px 16px;
-            background: linear-gradient(135deg, #1a1a1a, #1e1e1e);
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-bottom: 8px;
         }
         
-        .header h1 {
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            color: #fff;
+        .header-title {
+            color: var(--text);
+            font-size: 12px;
+            font-weight: bold;
         }
         
-        .header .badge {
-            font-size: 9px;
-            padding: 3px 8px;
-            background: #252525;
-            border-radius: 3px;
-            color: #666;
-            border: 1px solid #333;
+        .header-title span {
+            color: var(--text-dim);
         }
         
         .stats {
             display: flex;
-            background: #0f0f0f;
-            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
         }
         
         .stat {
             flex: 1;
-            padding: 12px 8px;
             text-align: center;
-            border-right: 1px solid #1a1a1a;
         }
         
-        .stat:last-child { border-right: none; }
+        .stat:not(:last-child) {
+            border-right: 1px solid var(--border);
+        }
         
         .stat .value {
-            font-size: 22px;
-            font-weight: 600;
-            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text);
         }
         
         .stat .label {
-            font-size: 9px;
-            color: #555;
+            font-size: 8px;
+            color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
             margin-top: 2px;
         }
         
-        .stat.safe .value { color: #4ade80; }
-        .stat.danger .value { color: #f87171; }
-        .stat.total .value { color: #60a5fa; }
-        
-        .content { padding: 14px; }
+        .buttons {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
         
         .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #1e1e1e, #181818);
-            border: 1px solid #2a2a2a;
-            border-radius: 4px;
-            color: #ccc;
-            font-size: 12px;
-            font-weight: 500;
+            flex: 1;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 10px;
             cursor: pointer;
-            transition: all 0.15s;
-            margin-bottom: 8px;
         }
         
         .btn:hover {
-            background: linear-gradient(135deg, #252525, #1e1e1e);
-            border-color: #3a3a3a;
-            color: #fff;
+            background: var(--border);
         }
         
-        .btn:active { transform: scale(0.99); }
-        
-        .btn.primary {
-            background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
-            border-color: #404040;
-        }
-        
-        .btn.primary:hover {
-            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+        .btn:disabled {
+            color: var(--text-dim);
         }
         
         .history {
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid #1a1a1a;
+            border-top: 1px solid var(--border);
+            padding-top: 8px;
         }
         
-        .history-title {
-            font-size: 10px;
-            color: #555;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+        .history-header {
             display: flex;
             justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 9px;
+            color: var(--text-dim);
+            text-transform: uppercase;
         }
         
-        .history-title span:last-child {
+        .history-header span:last-child {
             cursor: pointer;
-            color: #666;
         }
         
-        .history-title span:last-child:hover { color: #888; }
-        
-        .history-list { max-height: 140px; overflow-y: auto; }
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
         
         .history-item {
-            padding: 8px 10px;
-            background: #0f0f0f;
-            border-radius: 3px;
+            padding: 6px 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
             margin-bottom: 4px;
-            border-left: 2px solid #2a2a2a;
+            font-size: 10px;
         }
         
-        .history-item.clean { border-left-color: #4ade80; }
-        .history-item.danger { border-left-color: #f87171; }
+        .history-item.safe { border-left: 2px solid var(--safe); }
+        .history-item.warning { border-left: 2px solid var(--warning); }
+        .history-item.danger { border-left: 2px solid var(--danger); }
         
         .history-item .filename {
-            font-size: 11px;
-            font-weight: 500;
+            color: var(--text);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            color: #bbb;
-        }
-        
-        .history-item .explanation {
-            font-size: 9px;
-            color: #888;
-            margin-top: 3px;
-            line-height: 14px;
-        }
-        
-        .safety-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8px;
-            font-weight: 600;
-            margin-right: 4px;
-            text-transform: uppercase;
-        }
-        
-        .safety-badge.clean {
-            background: rgba(74, 222, 128, 0.15);
-            color: #4ade80;
-        }
-        
-        .safety-badge.warning {
-            background: rgba(251, 191, 36, 0.15);
-            color: #fbbf24;
-        }
-        
-        .safety-badge.danger {
-            background: rgba(248, 113, 113, 0.15);
-            color: #f87171;
-        }
-        
-        .history-item.clean .safety-badge.clean {
-            background: rgba(74, 222, 128, 0.2);
-            color: #4ade80;
-        }
-        
-        .history-item.warning .safety-badge.warning {
-            background: rgba(251, 191, 36, 0.2);
-            color: #fbbf24;
-        }
-        
-        .history-item.danger .safety-badge.danger {
-            background: rgba(248, 113, 113, 0.2);
-            color: #f87171;
         }
         
         .history-item .meta {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 4px;
+            color: var(--text-dim);
             font-size: 9px;
-            color: #555;
-        }
-        
-        .history-item .status {
-            padding: 1px 4px;
-            border-radius: 2px;
-            font-size: 8px;
-            text-transform: uppercase;
-        }
-        
-        .history-item .status.clean { background: rgba(74, 222, 128, 0.1); color: #4ade80; }
-        .history-item .status.danger { background: rgba(248, 113, 113, 0.1); color: #f87171; }
-        
-        .settings {
-            padding: 10px 14px;
-            border-top: 1px solid #1a1a1a;
-            margin-top: 10px;
-        }
-        
-        .setting {
+            margin-top: 2px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
         }
         
-        .setting-label { font-size: 11px; color: #666; }
-        
-        .toggle {
-            width: 32px;
-            height: 18px;
-            background: #252525;
-            border-radius: 9px;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .toggle.active { background: #404040; }
-        
-        .toggle::after {
-            content: '';
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            background: #888;
-            border-radius: 50%;
-            top: 2px;
-            left: 2px;
-            transition: all 0.2s;
-        }
-        
-        .toggle.active::after {
-            left: 16px;
-            background: #fff;
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-dim);
+            font-size: 10px;
         }
         
         .footer {
-            padding: 8px 14px;
+            border-top: 1px solid var(--border);
+            padding: 6px 8px;
+            font-size: 8px;
+            color: var(--text-dim);
             text-align: center;
-            font-size: 9px;
-            color: #333;
         }
         
-        .history-list::-webkit-scrollbar { width: 3px; }
-        .history-list::-webkit-scrollbar-track { background: #0a0a0a; }
-        .history-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .cursor {
+            display: inline-block;
+            width: 6px;
+            height: 12px;
+            background: var(--text);
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--border); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Virus Scanner</h1>
-        <span class="badge">SCANNER</span>
-    </div>
-    
-    <div class="stats">
-        <div class="stat total">
-            <div class="value" id="totalCount">0</div>
-            <div class="label">Scanned</div>
+    <div class="terminal">
+        <div class="header">
+            <div class="header-title">> virus_scanner <span>v1.0</span></div>
         </div>
-        <div class="stat safe">
-            <div class="value" id="cleanCount">0</div>
-            <div class="label">Clean</div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="value" id="totalCount">0</div>
+                <div class="label">Scanned</div>
+            </div>
+            <div class="stat">
+                <div class="value" id="cleanCount">0</div>
+                <div class="label">Clean</div>
+            </div>
+            <div class="stat">
+                <div class="value" id="threatCount">0</div>
+                <div class="label">Threats</div>
+            </div>
         </div>
-        <div class="stat danger">
-            <div class="value" id="threatCount">0</div>
-            <div class="label">Threats</div>
+        
+        <div class="buttons">
+            <button class="btn" id="quickScan">scan --latest</button>
+            <button class="btn" id="scanAll">scan --all</button>
         </div>
-    </div>
-    
-    <div class="content">
-        <button class="btn primary" id="quickScan">Quick Scan</button>
-        <button class="btn" id="scanAll">Scan All Downloads</button>
         
         <div class="history">
-            <div class="history-title">
-                <span>Recent</span>
-                <span id="clearHistory">Clear</span>
+            <div class="history-header">
+                <span>History</span>
+                <span id="clearHistory">clear</span>
             </div>
             <div class="history-list" id="historyList"></div>
         </div>
-    </div>
-    
-    <div class="settings">
-        <div class="setting">
-            <span class="setting-label">Auto-scan</span>
-            <div class="toggle active" id="autoScan"></div>
-        </div>
-        <div class="setting">
-            <span class="setting-label">Notifications</span>
-            <div class="toggle active" id="notifications"></div>
+        
+        <div class="footer">
+            > ready <span class="cursor"></span>
         </div>
     </div>
-    
-    <div class="footer">v1.0</div>
     
     <script src="popup.js"></script>
 </body>
