@@ -15,35 +15,57 @@ function setupListeners() {
 async function loadHistory() {
     const history = await chrome.runtime.sendMessage({ action: 'getHistory' }) || [];
     const listEl = document.getElementById('historyList');
-    
+
     if (history.length === 0) {
         listEl.innerHTML = '<div class="empty">No files scanned</div>';
         return;
     }
-    
+
     listEl.innerHTML = '';
-    
+
     history.forEach(item => {
         const result = item.result || {};
         const riskScore = result.risk_score || 0;
         const time = item.timestamp ? formatTime(item.timestamp) : '';
-        
+
         let status, statusClass;
         if (riskScore >= 60) { status = 'Danger'; statusClass = 'danger'; }
         else if (riskScore >= 30) { status = 'Warning'; statusClass = 'danger'; }
         else { status = 'Safe'; statusClass = 'safe'; }
-        
+
+        // Get explanations
+        const explanations = result.explanations || [];
+        const reasons = explanations.length > 0
+            ? explanations
+            : (statusClass === 'danger'
+                ? ['High risk score detected', 'Suspicious patterns found']
+                : ['No threats detected', 'File appears clean']);
+
         const div = document.createElement('div');
         div.className = `item ${statusClass}`;
-        
+
+        let reasonsHtml = reasons.map(r => `<div class="reason">${escapeHtml(r)}</div>`).join('');
+
         div.innerHTML = `
-            <div class="name">${escapeHtml(item.filename || 'Unknown')}</div>
+            <div class="name">
+                ${escapeHtml(item.filename || 'Unknown')}
+                <span class="arrow">\u25B6</span>
+            </div>
             <div class="info">
                 <span>${status} - ${riskScore}%</span>
                 <span>${time}</span>
             </div>
+            <div class="explanation">
+                <div class="explanation-title">Why this is ${status.toLowerCase()}</div>
+                ${reasonsHtml}
+            </div>
         `;
-        
+
+        // Toggle explanation on click
+        div.addEventListener('click', () => {
+            div.classList.toggle('expanded');
+        });
+
         listEl.appendChild(div);
     });
 }
@@ -59,9 +81,9 @@ async function quickScan() {
     const btn = document.getElementById('quickScan');
     btn.textContent = 'Scanning...';
     btn.disabled = true;
-    
+
     await chrome.runtime.sendMessage({ action: 'quickScan' });
-    
+
     setTimeout(() => {
         btn.textContent = 'Quick Scan';
         btn.disabled = false;
@@ -74,9 +96,9 @@ async function scanAll() {
     const btn = document.getElementById('scanAll');
     btn.textContent = 'Scanning...';
     btn.disabled = true;
-    
+
     await chrome.runtime.sendMessage({ action: 'scanAll' });
-    
+
     setTimeout(() => {
         btn.textContent = 'Scan All';
         btn.disabled = false;
@@ -101,7 +123,7 @@ function formatTime(timestamp) {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now - date;
-    
+
     if (diff < 60000) return 'now';
     if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
     if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';

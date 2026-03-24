@@ -103,7 +103,7 @@
             color: var(--blue);
         }
         
-        .history { max-height: 180px; overflow-y: auto; }
+        .history { max-height: 200px; overflow-y: auto; }
         
         .item {
             background: var(--card);
@@ -111,8 +111,11 @@
             padding: 8px 10px;
             margin-bottom: 6px;
             border-left: 3px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
         }
         
+        .item:hover { background: #2a2a2a; }
         .item.safe { border-left-color: var(--blue); }
         .item.danger { border-left-color: var(--red); }
         
@@ -131,6 +134,46 @@
             display: flex;
             justify-content: space-between;
         }
+        
+        .item .arrow {
+            font-size: 8px;
+            color: var(--dim);
+            transition: transform 0.2s;
+        }
+        
+        .item.expanded .arrow { transform: rotate(90deg); }
+        
+        .explanation {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 10px;
+        }
+        
+        .item.expanded .explanation { display: block; }
+        
+        .explanation-title {
+            color: var(--dim);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .reason {
+            padding: 3px 0;
+            color: var(--text);
+            font-size: 10px;
+        }
+        
+        .reason::before {
+            content: '\2022';
+            color: var(--blue);
+            margin-right: 6px;
+        }
+        
+        .item.danger .reason::before { color: var(--red); }
         
         .empty {
             text-align: center;

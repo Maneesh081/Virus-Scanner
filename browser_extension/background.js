@@ -1,16 +1,63 @@
 // Virus Scanner - Background Service Worker
 
+// Default explanations (used if SHAP explanations not available)
+const DEFAULT_EXPLANATIONS = {
+    malware_reasons: [
+        'High entropy (packed/encrypted content)',
+        'Suspicious API calls detected',
+        'Contains embedded URLs or IP addresses',
+        'Multiple suspicious code patterns',
+        'PE header anomalies detected'
+    ],
+    clean_reasons: [
+        'Normal file entropy',
+        'Standard API usage patterns',
+        'No suspicious strings detected',
+        'Standard executable format',
+        'Known legitimate software pattern'
+    ]
+};
+
+// Load explanations from JSON file
+let explanations = DEFAULT_EXPLANATIONS;
+
+async function loadExplanations() {
+    try {
+        const response = await fetch(chrome.runtime.getURL('explanations.json'));
+        if (response.ok) {
+            explanations = await response.json();
+            console.log('Loaded SHAP explanations');
+        }
+    } catch (e) {
+        console.log('Using default explanations:', e.message);
+    }
+}
+
 // Initialize
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.set({ 
+    chrome.storage.local.set({
         scanHistory: [],
         stats: { total: 0, clean: 0, threats: 0 }
     });
+    loadExplanations();
 });
 
-// Monitor ALL downloads
+// Load explanations on startup
+loadExplanations();
+
+// Monitor ALL downloads - scan on creation
 chrome.downloads.onCreated.addListener((downloadItem) => {
     scanFile(downloadItem);
+});
+
+// Also scan when download completes
+chrome.downloads.onChanged.addListener(async (downloadDelta) => {
+    if (downloadDelta.state && downloadDelta.state.current === 'complete') {
+        const downloads = await chrome.downloads.search({ id: downloadDelta.id });
+        if (downloads.length > 0) {
+            scanFile(downloads[0]);
+        }
+    }
 });
 
 // Main scan function
@@ -21,22 +68,22 @@ async function scanFile(downloadItem) {
         timestamp: new Date().toISOString(),
         result: null
     };
-    
+
     // Save to history immediately
     let history = await getHistory();
     history.unshift(scanResult);
     await saveHistory(history.slice(0, 100));
-    
+
     // Perform scan
     const result = fastScan(downloadItem);
     scanResult.result = result;
-    
+
     // Update history with result
     history = await getHistory();
     const idx = history.findIndex(x => x.id === scanResult.id);
     if (idx >= 0) history[idx] = scanResult;
     await saveHistory(history);
-    
+
     // Update stats
     let stats = await getStats();
     stats.total++;
@@ -46,30 +93,88 @@ async function scanFile(downloadItem) {
         stats.clean++;
     }
     await chrome.storage.local.set({ stats });
-    
+
+    // Show notification
+    sendNotification(downloadItem.filename, result);
+
     return result;
 }
 
-// Fast heuristic scan - scans ALL file types
+// Generate explanation based on scan result
+function generateExplanation(result) {
+    const reasons = [];
+
+    // Check each finding
+    if (result.findings && result.findings.length > 0) {
+        result.findings.forEach(f => {
+            if (f.category) {
+                if (f.category.includes('entropy')) {
+                    reasons.push('High entropy detected');
+                } else if (f.category.includes('import')) {
+                    reasons.push('Suspicious API calls');
+                } else if (f.category.includes('url') || f.category.includes('network')) {
+                    reasons.push('Contains embedded URLs');
+                } else if (f.category.includes('software')) {
+                    reasons.push('Known legitimate software');
+                } else if (f.category.includes('file')) {
+                    reasons.push('Standard file type');
+                } else {
+                    reasons.push(f.category);
+                }
+            }
+        });
+    }
+
+    // Add risk-based explanations
+    if (result.is_malicious) {
+        if (reasons.length === 0) {
+            reasons.push(...explanations.malware_reasons.slice(0, 3));
+        }
+    } else {
+        if (reasons.length === 0) {
+            reasons.push(...explanations.clean_reasons.slice(0, 3));
+        }
+    }
+
+    return reasons.slice(0, 5);
+}
+
+// Send Chrome notification
+function sendNotification(filename, result) {
+    const isDanger = result.is_malicious;
+    const title = isDanger ? 'Threat Detected' : 'File Scanned';
+    const message = isDanger
+        ? `${filename} - ${result.risk_score}% risk\n${result.threat_type}`
+        : `${filename} - ${result.risk_score}% risk\nSafe`;
+
+    chrome.notifications.create({
+        type: 'basic',
+        title: title,
+        message: message,
+        priority: isDanger ? 2 : 1
+    }).catch(e => console.log('Notification error:', e));
+}
+
+// Fast heuristic scan
 function fastScan(downloadItem) {
     const filename = downloadItem.filename.toLowerCase();
     let riskScore = 0;
     let findings = [];
     let is_malicious = false;
     let threat_type = 'clean';
-    
+
     // Get file extension
     const ext = filename.includes('.') ? filename.split('.').pop() : '';
-    
+
     // Whitelist for known legitimate software
     const legitimate = ['vscode', 'visual studio', 'chrome', 'firefox', 'edge', 'discord',
-                       'spotify', 'steam', 'zoom', 'teams', 'slack', 'notepad++', 'git',
-                       'python', 'nodejs', 'java', 'npm', 'anaconda', 'sublime', 'atom',
-                       'utorrent', 'utorr', 'bitTorrent', 'qbittorrent', 'winrar', '7zip',
-                       'adobe', 'photoshop', 'illustrator', 'microsoft', 'nvidia', 'amd', 'intel'];
-    
+        'spotify', 'steam', 'zoom', 'teams', 'slack', 'notepad++', 'git',
+        'python', 'nodejs', 'java', 'npm', 'anaconda', 'sublime', 'atom',
+        'utorrent', 'utorr', 'bitTorrent', 'qbittorrent', 'winrar', '7zip',
+        'adobe', 'photoshop', 'illustrator', 'microsoft', 'nvidia', 'amd', 'intel'];
+
     const isLegit = legitimate.some(name => filename.includes(name));
-    
+
     // File extension risk levels
     const extRisk = {
         'exe': 25, 'dll': 30, 'sys': 30, 'scr': 35, 'bat': 25, 'cmd': 25, 'ps1': 25,
@@ -83,47 +188,56 @@ function fastScan(downloadItem) {
         'mp4': 0, 'mp3': 0, 'wav': 0, 'avi': 0, 'mkv': 0, 'mov': 0,
         'torrent': 5, 'html': 5, 'xml': 0, 'json': 0, 'css': 0,
     };
-    
+
     // Set base risk from extension
     if (extRisk[ext] !== undefined) {
         riskScore = extRisk[ext];
-        findings.push(ext + ' file');
+        findings.push({ category: `${ext} file type` });
     }
-    
+
     // Suspicious names - ALWAYS HIGH RISK
     const suspicious = ['crack', 'patch', 'keygen', 'activator', 'modmenu', 'free hack',
-                      'torrent', 'pirated', 'illegal', 'cheat engine', 'exploit'];
+        'torrent', 'pirated', 'illegal', 'cheat engine', 'exploit'];
     suspicious.forEach(s => {
         if (filename.includes(s)) {
             riskScore = 70;
-            findings.push('suspicious: ' + s);
+            findings.push({ category: `Suspicious: ${s}` });
             is_malicious = true;
             threat_type = 'malicious';
         }
     });
-    
+
     // Known legitimate software - SAFE
     if (isLegit && riskScore < 30) {
         riskScore = 5;
-        findings = ['known software'];
+        findings = [{ category: 'Known legitimate software' }];
         threat_type = 'clean';
         is_malicious = false;
     }
-    
+
     // Cap risk score
     riskScore = Math.min(100, riskScore);
-    
+
     // Determine threat level
     if (riskScore >= 60) {
         is_malicious = true;
         threat_type = riskScore >= 80 ? 'high_risk' : 'suspicious';
     }
-    
+
+    // Generate explanations
+    const reasons = generateExplanation({
+        is_malicious,
+        threat_type,
+        risk_score: riskScore,
+        findings
+    });
+
     return {
         is_malicious,
         threat_type,
         risk_score: riskScore,
-        findings: findings.map(f => ({ category: f, severity: riskScore >= 60 ? 'high' : 'low' }))
+        findings,
+        explanations: reasons
     };
 }
 
