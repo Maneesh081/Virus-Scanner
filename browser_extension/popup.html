@@ -8,218 +8,176 @@
         
         :root {
             --bg: #1a1a1a;
-            --card: #242424;
+            --card: #222;
             --border: #333;
-            --text: #b0b0b0;
-            --text-dim: #666;
-            --accent: #666;
-            --safe: #4CAF50;
-            --warning: #FF9800;
-            --danger: #f44336;
+            --red: #e63946;
+            --blue: #457b9d;
+            --text: #e0e0e0;
+            --dim: #777;
         }
         
         body {
-            width: 320px;
+            width: 300px;
             background: var(--bg);
             color: var(--text);
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 11px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 13px;
         }
         
-        .terminal {
-            padding: 8px;
-        }
+        .container { padding: 12px; }
         
         .header {
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
         
-        .header-title {
-            color: var(--text);
-            font-size: 12px;
-            font-weight: bold;
+        .logo {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
         
-        .header-title span {
-            color: var(--text-dim);
-        }
+        .logo .r { color: var(--red); }
+        .logo .b { color: var(--blue); }
+        
+        .ver { font-size: 10px; color: var(--dim); }
         
         .stats {
             display: flex;
-            margin-bottom: 8px;
-            padding: 8px;
             background: var(--card);
-            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
         }
         
-        .stat {
-            flex: 1;
-            text-align: center;
-        }
+        .stat { flex: 1; text-align: center; }
         
-        .stat:not(:last-child) {
-            border-right: 1px solid var(--border);
-        }
+        .stat:not(:last-child) { border-right: 1px solid var(--border); }
         
-        .stat .value {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--text);
-        }
+        .stat .num { font-size: 20px; font-weight: 700; }
         
-        .stat .label {
-            font-size: 8px;
-            color: var(--text-dim);
+        .stat .lbl {
+            font-size: 9px;
+            color: var(--dim);
             text-transform: uppercase;
-            margin-top: 2px;
+            letter-spacing: 0.5px;
         }
         
-        .buttons {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 8px;
-        }
+        .stat.total .num { color: var(--text); }
+        .stat.safe .num { color: var(--blue); }
+        .stat.danger .num { color: var(--red); }
+        
+        .btns { display: flex; gap: 8px; margin-bottom: 12px; }
         
         .btn {
             flex: 1;
-            padding: 8px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
+            transition: opacity 0.2s;
         }
         
-        .btn:hover {
-            background: var(--border);
-        }
+        .btn:active { opacity: 0.8; }
+        .btn:disabled { opacity: 0.5; }
         
-        .btn:disabled {
-            color: var(--text-dim);
-        }
+        .btn.blue { background: var(--blue); color: #fff; }
+        .btn.grey { background: var(--card); color: var(--text); border: 1px solid var(--border); }
         
-        .history {
-            border-top: 1px solid var(--border);
-            padding-top: 8px;
-        }
-        
-        .history-header {
+        .section-title {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 9px;
-            color: var(--text-dim);
-            text-transform: uppercase;
         }
         
-        .history-header span:last-child {
+        .section-title span:last-child {
             cursor: pointer;
+            color: var(--blue);
         }
         
-        .history-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
+        .history { max-height: 180px; overflow-y: auto; }
         
-        .history-item {
-            padding: 6px 8px;
+        .item {
             background: var(--card);
-            border: 1px solid var(--border);
-            margin-bottom: 4px;
-            font-size: 10px;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-left: 3px solid var(--border);
         }
         
-        .history-item.safe { border-left: 2px solid var(--safe); }
-        .history-item.warning { border-left: 2px solid var(--warning); }
-        .history-item.danger { border-left: 2px solid var(--danger); }
+        .item.safe { border-left-color: var(--blue); }
+        .item.danger { border-left-color: var(--red); }
         
-        .history-item .filename {
-            color: var(--text);
+        .item .name {
+            font-size: 11px;
+            font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
-        .history-item .meta {
-            color: var(--text-dim);
-            font-size: 9px;
-            margin-top: 2px;
+        .item .info {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 3px;
             display: flex;
             justify-content: space-between;
         }
         
         .empty {
             text-align: center;
-            padding: 20px;
-            color: var(--text-dim);
-            font-size: 10px;
+            padding: 24px;
+            color: var(--dim);
+            font-size: 11px;
         }
         
-        .footer {
-            border-top: 1px solid var(--border);
-            padding: 6px 8px;
-            font-size: 8px;
-            color: var(--text-dim);
-            text-align: center;
-        }
-        
-        .cursor {
-            display: inline-block;
-            width: 6px;
-            height: 12px;
-            background: var(--text);
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-        
-        .history-list::-webkit-scrollbar { width: 4px; }
-        .history-list::-webkit-scrollbar-track { background: transparent; }
-        .history-list::-webkit-scrollbar-thumb { background: var(--border); }
+        .history::-webkit-scrollbar { width: 3px; }
+        .history::-webkit-scrollbar-track { background: transparent; }
+        .history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     </style>
 </head>
 <body>
-    <div class="terminal">
+    <div class="container">
         <div class="header">
-            <div class="header-title">> virus_scanner <span>v1.0</span></div>
+            <div class="logo"><span class="r">V</span>irus <span class="b">S</span>canner</div>
+            <span class="ver">v1.0</span>
         </div>
         
         <div class="stats">
-            <div class="stat">
-                <div class="value" id="totalCount">0</div>
-                <div class="label">Scanned</div>
+            <div class="stat total">
+                <div class="num" id="totalCount">0</div>
+                <div class="lbl">Scanned</div>
             </div>
-            <div class="stat">
-                <div class="value" id="cleanCount">0</div>
-                <div class="label">Clean</div>
+            <div class="stat safe">
+                <div class="num" id="cleanCount">0</div>
+                <div class="lbl">Clean</div>
             </div>
-            <div class="stat">
-                <div class="value" id="threatCount">0</div>
-                <div class="label">Threats</div>
+            <div class="stat danger">
+                <div class="num" id="threatCount">0</div>
+                <div class="lbl">Threats</div>
             </div>
         </div>
         
-        <div class="buttons">
-            <button class="btn" id="quickScan">scan --latest</button>
-            <button class="btn" id="scanAll">scan --all</button>
+        <div class="btns">
+            <button class="btn blue" id="quickScan">Quick Scan</button>
+            <button class="btn grey" id="scanAll">Scan All</button>
         </div>
         
-        <div class="history">
-            <div class="history-header">
-                <span>History</span>
-                <span id="clearHistory">clear</span>
-            </div>
-            <div class="history-list" id="historyList"></div>
+        <div class="section-title">
+            <span>History</span>
+            <span id="clearHistory">Clear</span>
         </div>
         
-        <div class="footer">
-            > ready <span class="cursor"></span>
+        <div class="history" id="historyList">
+            <div class="empty">No files scanned</div>
         </div>
     </div>
     

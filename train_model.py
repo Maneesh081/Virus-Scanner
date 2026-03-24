@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
 Virus Scanner - ML Model Trainer
-Trains a model using datasets from the datasets/ folder
+Trains a model using training/malware/ and training/clean/ folders
 """
 
 import os
+import sys
 import json
-import hashlib
 import math
 import struct
 import pickle
+import shutil
 from collections import Counter
 from pathlib import Path
 from datetime import datetime
@@ -22,7 +23,7 @@ try:
 except ImportError:
     print("Installing required packages...")
     import subprocess
-    subprocess.check_call(['pip', 'install', '-q', 'numpy', 'scikit-learn'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'numpy', 'scikit-learn'])
     import numpy as np
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
@@ -30,38 +31,27 @@ except ImportError:
 
 VERSION = "1.0"
 
-# File categories for labeling
-CATEGORIES = {
-    'trojan': 1,
-    'worm': 2,
-    'ransomware': 3,
-    'spyware': 4,
-    'adware': 5,
-    'backdoor': 6,
-    'dropper': 7,
-    'pup': 8,
-    'clean': 0
-}
-
 # Suspicious imports to look for
-SUSPICIOUS_IMPORTS = {
-    'kernel32': ['CreateRemoteThread', 'VirtualAllocEx', 'WriteProcessMemory', 'OpenProcess',
-                  'GetProcAddress', 'LoadLibrary', 'CreateProcess', 'ShellExecute', 'WinExec'],
-    'ntdll': ['NtQuerySystemInformation', 'NtWriteVirtualMemory', 'NtReadVirtualMemory'],
-    'advapi32': ['CreateService', 'AdjustTokenPrivileges', 'RegSetValueEx'],
-    'user32': ['FindWindow', 'SetWindowsHook', 'GetAsyncKeyState'],
-    'wininet': ['InternetOpen', 'InternetOpenUrl', 'HttpSendRequest'],
-    'ws2_32': ['socket', 'connect', 'send', 'recv'],
-    'urlmon': ['URLDownloadToFile'],
-}
+SUSPICIOUS_IMPORTS = [
+    'CreateRemoteThread', 'VirtualAllocEx', 'WriteProcessMemory', 
+    'OpenProcess', 'GetProcAddress', 'LoadLibrary', 'CreateProcess',
+    'ShellExecute', 'WinExec', 'NtQuerySystemInformation',
+    'NtWriteVirtualMemory', 'NtReadVirtualMemory',
+    'CreateService', 'AdjustTokenPrivileges', 'RegSetValueEx',
+    'FindWindow', 'SetWindowsHook', 'GetAsyncKeyState',
+    'InternetOpen', 'InternetOpenUrl', 'HttpSendRequest',
+    'socket', 'connect', 'send', 'recv',
+    'URLDownloadToFile', 'CryptEncrypt', 'BCryptEncrypt'
+]
 
-# Patterns to detect
-PATTERNS = {
-    'network': [r'https?://\S+', r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'],
-    'persistence': [r'Software\\Microsoft\\Windows\\CurrentVersion\\Run'],
-    'crypto': [r'cryptencrypt', r'cryptgenkey', r'bcryptencrypt'],
-    'keylog': [r'getasynckeystate', r'setwindowshook', r'keylog'],
-}
+SUSPICIOUS_STRINGS = [
+    'https://', 'http://', '192.168.', '10.0.', '172.16.',
+    'Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+    'schtasks', 'cmd.exe', 'powershell',
+    'encrypt', 'ransom', 'bitcoin', 'payment',
+    'keylog', 'backdoor', 'reverse', 'shell', 'meterpreter',
+    'download', 'execute', 'runas'
+]
 
 class FeatureExtractor:
     """Extract features from files for ML training"""
@@ -73,14 +63,16 @@ class FeatureExtractor:
         try:
             with open(file_path, 'rb') as f:
                 data = f.read()
-        except:
+        except Exception as e:
             return [0] * 100
         
         # File size features
-        features.append(len(data))
-        features.append(len(data) / 1024)
-        features.append(1 if len(data) > 1024*1024 else 0)
-        features.append(1 if len(data) < 1024 else 0)
+        file_size = len(data)
+        features.append(file_size)
+        features.append(file_size / 1024)
+        features.append(file_size / (1024 * 1024))
+        features.append(1 if file_size > 1024 * 1024 else 0)
+        features.append(1 if file_size < 1024 else 0)
         
         # Entropy
         entropy = self._calc_entropy(data)
@@ -89,7 +81,7 @@ class FeatureExtractor:
         features.append(1 if entropy > 6.5 else 0)
         features.append(1 if entropy < 4 else 0)
         
-        # PE header analysis
+        # PE header features
         features.extend(self._analyze_pe(data))
         
         # Import analysis
@@ -108,6 +100,7 @@ class FeatureExtractor:
         return features[:100]
     
     def _calc_entropy(self, data):
+        """Calculate Shannon entropy"""
         if len(data) < 256:
             return 0
         sample = data[:10000]
@@ -115,6 +108,7 @@ class FeatureExtractor:
         return -sum((c/len(sample)) * math.log2(c/len(sample)) for c in freq.values() if c > 0)
     
     def _analyze_pe(self, data):
+        """Analyze PE header"""
         features = [0] * 15
         
         if len(data) < 64 or data[:2] != b'MZ':
@@ -127,35 +121,37 @@ class FeatureExtractor:
                 machine = struct.unpack('<H', data[pe_offset+4:pe_offset+6])[0]
                 features[1] = 1 if machine == 0x014C else 0  # x86
                 features[2] = 1 if machine == 0x8664 else 0  # x64
-                features[3] = struct.unpack('<H', data[pe_offset+6:pe_offset+8])[0]  # sections
+                features[3] = struct.unpack('<H', data[pe_offset+6:pe_offset+8])[0]  # num sections
         except:
             pass
         
         return features
     
     def _analyze_imports(self, data):
+        """Analyze suspicious imports"""
         features = [0] * 20
+        
         try:
             text = data.decode('utf-8', errors='ignore').lower()
         except:
             return features
         
         count = 0
-        for lib, funcs in SUSPICIOUS_IMPORTS.items():
-            if lib.lower() in text:
-                for func in funcs:
-                    if func.lower() in text:
-                        count += 1
-                        features[CATEGORIES.get(list(CATEGORIES.keys())[list(CATEGORIES.values()).index(1) % 8], '').index(func) % 8] = 1
+        for imp in SUSPICIOUS_IMPORTS:
+            if imp.lower() in text:
+                count += 1
         
         features[0] = count
         features[1] = 1 if count > 5 else 0
         features[2] = 1 if count > 10 else 0
+        features[3] = 1 if count > 15 else 0
         
         return features
     
     def _analyze_strings(self, data):
+        """Analyze suspicious strings"""
         features = [0] * 15
+        
         try:
             text = data.decode('utf-8', errors='ignore')
         except:
@@ -164,30 +160,23 @@ class FeatureExtractor:
         import re
         
         # URLs and IPs
-        urls = re.findall(r'https?://\S+', text)
-        ips = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text)
-        features[0] = len(urls)
-        features[1] = len(ips)
+        urls = len(re.findall(r'https?://\S+', text))
+        ips = len(re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', text))
+        features[0] = urls
+        features[1] = ips
         
-        # Persistence
-        persist = re.findall(r'Software\\Microsoft\\Windows\\CurrentVersion\\Run', text)
-        features[2] = len(persist)
-        
-        # Crypto patterns
-        crypto = re.findall(r'cryptencrypt|cryptgenkey|bcryptencrypt', text.lower())
-        features[3] = len(crypto)
+        # Suspicious strings count
+        suspicious_count = sum(1 for s in SUSPICIOUS_STRINGS if s.lower() in text.lower())
+        features[2] = suspicious_count
+        features[3] = 1 if suspicious_count > 3 else 0
         
         # Base64
-        base64 = re.findall(r'[A-Za-z0-9+/]{20,}={0,2}', text)
-        features[4] = len(base64)
-        
-        # Hex
-        hex_pat = re.findall(r'\\x[0-9A-Fa-f]{2}', text)
-        features[5] = len(hex_pat)
+        features[4] = len(re.findall(r'[A-Za-z0-9+/]{20,}={0,2}', text))
         
         return features
     
     def _analyze_sections(self, data):
+        """Analyze PE sections"""
         features = [0] * 10
         section_names = [b'.text', b'.data', b'.rsrc', b'.reloc', b'.upx0', 
                         b'.aspack', b'.packed', b'.stub']
@@ -202,52 +191,53 @@ class ModelTrainer:
     def __init__(self):
         self.extractor = FeatureExtractor()
         self.model = None
-        self.label_map = CATEGORIES
     
     def load_dataset(self, dataset_path):
-        """Load files from dataset folder"""
+        """Load files from training/malware/ and training/clean/ folders"""
         X = []
         y = []
         
-        dataset_dir = Path(dataset_path)
+        malware_dir = Path(dataset_path) / 'malware'
+        clean_dir = Path(dataset_path) / 'clean'
         
-        if not dataset_dir.exists():
-            print(f"Dataset folder not found: {dataset_path}")
-            print("Creating sample dataset structure...")
-            dataset_dir.mkdir(exist_ok=True)
-            for cat in CATEGORIES.keys():
-                (dataset_dir / cat).mkdir(exist_ok=True)
-            print(f"Please add files to:")
-            for cat in CATEGORIES.keys():
-                print(f"  {dataset_path}/{cat}/")
-            return None, None
+        # Create directories if they don't exist
+        malware_dir.mkdir(parents=True, exist_ok=True)
+        clean_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"\nLoading dataset from: {dataset_path}")
         
-        for category, label in CATEGORIES.items():
-            category_path = dataset_dir / category
-            if not category_path.exists():
-                category_path.mkdir(exist_ok=True)
-            
-            files = list(category_path.glob('*'))
-            files = [f for f in files if f.is_file() and not f.name.startswith('.')]
-            
-            print(f"  {category}: {len(files)} files")
-            
-            for file_path in files:
-                try:
-                    features = self.extractor.extract(str(file_path))
-                    X.append(features)
-                    y.append(label)
-                except Exception as e:
-                    print(f"    Error processing {file_path}: {e}")
+        # Load malware samples
+        malware_files = [f for f in malware_dir.iterdir() if f.is_file() and not f.name.startswith('.')]
+        print(f"  Malware samples: {len(malware_files)}")
+        
+        for file_path in malware_files:
+            try:
+                features = self.extractor.extract(str(file_path))
+                X.append(features)
+                y.append(1)  # 1 = malware
+            except Exception as e:
+                print(f"    Error: {file_path.name} - {e}")
+        
+        # Load clean samples
+        clean_files = [f for f in clean_dir.iterdir() if f.is_file() and not f.name.startswith('.')]
+        print(f"  Clean samples: {len(clean_files)}")
+        
+        for file_path in clean_files:
+            try:
+                features = self.extractor.extract(str(file_path))
+                X.append(features)
+                y.append(0)  # 0 = clean
+            except Exception as e:
+                print(f"    Error: {file_path.name} - {e}")
         
         if not X:
-            print("\nNo files found in dataset!")
-            print("Add malware and clean samples to the dataset folders.")
+            print("\nNo files found!")
+            print("\nPlease add files to:")
+            print(f"  {malware_dir} - for malware samples")
+            print(f"  {clean_dir} - for clean samples")
             return None, None
         
-        print(f"\nTotal samples: {len(X)}")
+        print(f"\nTotal samples: {len(X)} (Malware: {sum(y)}, Clean: {len(y)-sum(y)})")
         return np.array(X), np.array(y)
     
     def train(self, X, y):
@@ -274,20 +264,18 @@ class ModelTrainer:
         
         print(f"\nAccuracy: {accuracy:.2%}")
         print("\nClassification Report:")
-        print(classification_report(y_test, y_pred, 
-                                 target_names=list(CATEGORIES.keys())))
+        print(classification_report(y_test, y_pred, target_names=['Clean', 'Malware']))
         
         return accuracy
     
-    def save_model(self, output_path='trained_model.pkl'):
+    def save_model(self, output_path):
         """Save trained model"""
         if self.model is None:
             print("No model to save!")
-            return
+            return False
         
         model_data = {
             'model': self.model,
-            'label_map': self.label_map,
             'version': VERSION,
             'trained_at': datetime.now().isoformat(),
             'feature_count': 100
@@ -297,131 +285,50 @@ class ModelTrainer:
             pickle.dump(model_data, f)
         
         print(f"\nModel saved to: {output_path}")
-        
-        # Also save as JSON for browser extension
-        self._export_for_browser(output_path.replace('.pkl', '_rules.json'))
+        return True
     
-    def _export_for_browser(self, output_path):
-        """Export model as JavaScript rules for browser"""
-        if self.model is None:
-            return
-        
-        # Get feature importances
-        importances = self.model.feature_importances_
-        
-        # Top features
-        top_features = np.argsort(importances)[-20:][::-1]
-        
-        rules = {
-            'version': VERSION,
-            'trained_at': datetime.now().isoformat(),
-            'feature_importance': importances.tolist(),
-            'top_features': top_features.tolist(),
-            'accuracy': float(self.model.score(
-                self.model.model_test_X if hasattr(self, 'model_test_X') else 
-                self.model.X_test if hasattr(self.model, 'X_test') else [[0]*100]
-            , [0]*1)) if hasattr(self.model, 'model_test_X') or hasattr(self.model, 'X_test') else 0.85
-        }
-        
-        with open(output_path, 'w') as f:
-            json.dump(rules, f, indent=2)
-        
-        print(f"Browser rules exported to: {output_path}")
-    
-    def predict(self, file_path):
-        """Predict category for a file"""
-        if self.model is None:
-            print("No trained model!")
-            return None
-        
-        features = self.extractor.extract(file_path)
-        prediction = self.model.predict([features])[0]
-        probabilities = self.model.predict_proba([features])[0]
-        
-        # Find category name
-        for name, label in self.label_map.items():
-            if label == prediction:
-                category = name
-                break
-        else:
-            category = 'unknown'
-        
-        confidence = max(probabilities)
-        
-        return {
-            'category': category,
-            'confidence': float(confidence),
-            'probabilities': {name: float(p) for name, p in 
-                            zip(self.label_map.keys(), probabilities)}
-        }
+    def copy_to_extension(self, model_path, extension_dir):
+        """Copy model to browser extension folder"""
+        dest = Path(extension_dir) / 'trained_model.pkl'
+        shutil.copy2(model_path, dest)
+        print(f"Model copied to extension: {dest}")
+        return True
 
 
 def main():
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Train Virus Scanner ML Model')
-    parser.add_argument('--dataset', '-d', default='datasets',
-                       help='Path to dataset folder')
-    parser.add_argument('--output', '-o', default='trained_model.pkl',
-                       help='Output model file')
-    parser.add_argument('--test', '-t',
-                       help='Test model on a file')
-    
-    args = parser.parse_args()
-    
-    print("="*50)
+    print("=" * 50)
     print("Virus Scanner - ML Model Trainer")
-    print("="*50)
+    print("=" * 50)
     
     trainer = ModelTrainer()
     
-    if args.test:
-        # Test mode
-        if not os.path.exists('trained_model.pkl'):
-            print("No trained model found! Train first.")
-            return
-        
-        with open('trained_model.pkl', 'rb') as f:
-            model_data = pickle.load(f)
-        
-        trainer.model = model_data['model']
-        trainer.label_map = model_data['label_map']
-        
-        result = trainer.predict(args.test)
-        if result:
-            print(f"\nFile: {args.test}")
-            print(f"Prediction: {result['category']}")
-            print(f"Confidence: {result['confidence']:.2%}")
-            print("\nAll probabilities:")
-            for cat, prob in sorted(result['probabilities'].items(), 
-                                  key=lambda x: x[1], reverse=True):
-                print(f"  {cat}: {prob:.2%}")
-        return
+    # Use training folder
+    dataset_path = Path(__file__).parent / 'training'
     
-    # Training mode
-    X, y = trainer.load_dataset(args.dataset)
+    X, y = trainer.load_dataset(dataset_path)
     
     if X is None or len(X) == 0:
-        print("\nTo train the model:")
-        print("1. Add malware samples to: datasets/malware/")
-        print("2. Add clean samples to: datasets/clean/")
-        print("3. Run: python train_model.py")
         return
     
-    if len(np.unique(y)) < 2:
-        print("Need at least 2 different categories to train!")
-        return
-    
+    # Train
     accuracy = trainer.train(X, y)
-    trainer.save_model(args.output)
     
-    print("\n" + "="*50)
+    # Save to training folder
+    output_path = Path(__file__).parent / 'trained_model.pkl'
+    trainer.save_model(output_path)
+    
+    # Auto-copy to browser extension
+    extension_dir = Path(__file__).parent / 'browser_extension'
+    if extension_dir.exists():
+        trainer.copy_to_extension(output_path, extension_dir)
+    
+    print("\n" + "=" * 50)
     print("Training Complete!")
-    print("="*50)
-    print(f"Model saved to: {args.output}")
+    print("=" * 50)
     print(f"Accuracy: {accuracy:.2%}")
-    print("\nTo test the model:")
-    print(f"  python train_model.py -t <file_path>")
+    print(f"Model saved to: {output_path}")
+    print(f"Model copied to: {extension_dir}/trained_model.pkl")
+    print("\nReload the extension to use the new model!")
 
 
 if __name__ == '__main__':

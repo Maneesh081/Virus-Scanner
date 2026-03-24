@@ -17,7 +17,7 @@ async function loadHistory() {
     const listEl = document.getElementById('historyList');
     
     if (history.length === 0) {
-        listEl.innerHTML = '<div class="empty">no files scanned</div>';
+        listEl.innerHTML = '<div class="empty">No files scanned</div>';
         return;
     }
     
@@ -28,18 +28,18 @@ async function loadHistory() {
         const riskScore = result.risk_score || 0;
         const time = item.timestamp ? formatTime(item.timestamp) : '';
         
-        let safetyClass;
-        if (riskScore >= 60) safetyClass = 'danger';
-        else if (riskScore >= 30) safetyClass = 'warning';
-        else safetyClass = 'safe';
+        let status, statusClass;
+        if (riskScore >= 60) { status = 'Danger'; statusClass = 'danger'; }
+        else if (riskScore >= 30) { status = 'Warning'; statusClass = 'danger'; }
+        else { status = 'Safe'; statusClass = 'safe'; }
         
         const div = document.createElement('div');
-        div.className = `history-item ${safetyClass}`;
+        div.className = `item ${statusClass}`;
         
         div.innerHTML = `
-            <div class="filename">${escapeHtml(item.filename || 'unknown')}</div>
-            <div class="meta">
-                <span>[${safetyClass.toUpperCase()}] ${riskScore}%</span>
+            <div class="name">${escapeHtml(item.filename || 'Unknown')}</div>
+            <div class="info">
+                <span>${status} - ${riskScore}%</span>
                 <span>${time}</span>
             </div>
         `;
@@ -57,13 +57,13 @@ async function loadStats() {
 
 async function quickScan() {
     const btn = document.getElementById('quickScan');
-    btn.textContent = 'scanning...';
+    btn.textContent = 'Scanning...';
     btn.disabled = true;
     
     await chrome.runtime.sendMessage({ action: 'quickScan' });
     
     setTimeout(() => {
-        btn.textContent = 'scan --latest';
+        btn.textContent = 'Quick Scan';
         btn.disabled = false;
         loadHistory();
         loadStats();
@@ -72,13 +72,13 @@ async function quickScan() {
 
 async function scanAll() {
     const btn = document.getElementById('scanAll');
-    btn.textContent = 'scanning...';
+    btn.textContent = 'Scanning...';
     btn.disabled = true;
     
     await chrome.runtime.sendMessage({ action: 'scanAll' });
     
     setTimeout(() => {
-        btn.textContent = 'scan --all';
+        btn.textContent = 'Scan All';
         btn.disabled = false;
         loadHistory();
         loadStats();
@@ -103,7 +103,7 @@ function formatTime(timestamp) {
     const diff = now - date;
     
     if (diff < 60000) return 'now';
-    if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
-    return Math.floor(diff / 86400000) + 'd';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return Math.floor(diff / 86400000) + 'd ago';
 }
