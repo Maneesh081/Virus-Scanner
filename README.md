@@ -82,7 +82,7 @@ python train_model.py -t path/to/file.exe
 
 ### 3. Deploy to Extension
 
-After training, copy `trained_model.pkl` into `browser_extension/` and reload the extension.
+After training, `trained_model.pkl` is automatically copied into `browser_extension/`. Just reload the extension in your browser.
 
 ---
 
