@@ -1,229 +1,276 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Virus Scanner</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg: #1a1a1a;
-            --card: #222;
-            --border: #333;
-            --red: #e63946;
-            --blue: #457b9d;
-            --text: #e0e0e0;
-            --dim: #777;
-        }
-        
-        body {
-            width: 300px;
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 13px;
-        }
-        
-        .container { padding: 12px; }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        
-        .logo {
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        
-        .logo .r { color: var(--red); }
-        .logo .b { color: var(--blue); }
-        
-        .ver { font-size: 10px; color: var(--dim); }
-        
-        .stats {
-            display: flex;
-            background: var(--card);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .stat { flex: 1; text-align: center; }
-        
-        .stat:not(:last-child) { border-right: 1px solid var(--border); }
-        
-        .stat .num { font-size: 20px; font-weight: 700; }
-        
-        .stat .lbl {
-            font-size: 9px;
-            color: var(--dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .stat.total .num { color: var(--text); }
-        .stat.safe .num { color: var(--blue); }
-        .stat.danger .num { color: var(--red); }
-        
-        .btns { display: flex; gap: 8px; margin-bottom: 12px; }
-        
-        .btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        
-        .btn:active { opacity: 0.8; }
-        .btn:disabled { opacity: 0.5; }
-        
-        .btn.blue { background: var(--blue); color: #fff; }
-        .btn.grey { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-        
-        .section-title {
-            font-size: 10px;
-            color: var(--dim);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .section-title span:last-child {
-            cursor: pointer;
-            color: var(--blue);
-        }
-        
-        .history { max-height: 200px; overflow-y: auto; }
-        
-        .item {
-            background: var(--card);
-            border-radius: 6px;
-            padding: 8px 10px;
-            margin-bottom: 6px;
-            border-left: 3px solid var(--border);
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        
-        .item:hover { background: #2a2a2a; }
-        .item.safe { border-left-color: var(--blue); }
-        .item.danger { border-left-color: var(--red); }
-        
-        .item .name {
-            font-size: 11px;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .item .info {
-            font-size: 10px;
-            color: var(--dim);
-            margin-top: 3px;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .item .arrow {
-            font-size: 8px;
-            color: var(--dim);
-            transition: transform 0.2s;
-        }
-        
-        .item.expanded .arrow { transform: rotate(90deg); }
-        
-        .explanation {
-            display: none;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid var(--border);
-            font-size: 10px;
-        }
-        
-        .item.expanded .explanation { display: block; }
-        
-        .explanation-title {
-            color: var(--dim);
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-        
-        .reason {
-            padding: 3px 0;
-            color: var(--text);
-            font-size: 10px;
-        }
-        
-        .reason::before {
-            content: '\2022';
-            color: var(--blue);
-            margin-right: 6px;
-        }
-        
-        .item.danger .reason::before { color: var(--red); }
-        
-        .empty {
-            text-align: center;
-            padding: 24px;
-            color: var(--dim);
-            font-size: 11px;
-        }
-        
-        .history::-webkit-scrollbar { width: 3px; }
-        .history::-webkit-scrollbar-track { background: transparent; }
-        .history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>winters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #0b0d14;
+      --surface: #0f1220;
+      --border:  #1a1f33;
+      --blue:    #4d8ef0;
+      --red:     #f04d4d;
+      --amber:   #e8a93a;
+      --dim:     #3a4260;
+      --mid:     #5a6480;
+      --muted:   #8892aa;
+      --text:    #c8d4e8;
+    }
+
+    body {
+      width: 420px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow: hidden;
+    }
+
+
+
+    /* ── main body ── */
+    .term {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ── boot lines ── */
+    .boot {
+      color: var(--dim);
+      font-size: 10px;
+      margin-bottom: 10px;
+      line-height: 1.8;
+    }
+    .boot .hi { color: var(--mid); }
+
+    /* ── section divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0;
+    }
+
+    /* ── status block ── */
+    .status-block { margin-bottom: 2px; }
+    .status-row {
+      display: flex;
+      gap: 0;
+      font-size: 11px;
+      line-height: 2;
+    }
+    .status-key { color: var(--muted); width: 100px; flex-shrink: 0; }
+    .status-val { color: var(--text); }
+    .status-val.blue  { color: var(--blue); }
+    .status-val.red   { color: var(--red); }
+    .status-val.amber { color: var(--amber); }
+
+    /* ── scan block ── */
+    .scan-block { margin: 2px 0; }
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 2;
+    }
+    .prompt-sym { color: var(--blue); }
+    .prompt-cmd { color: var(--text); }
+    .run-link {
+      color: var(--blue);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-size: 10px;
+      margin-left: auto;
+    }
+    .run-link:hover { color: #7aaeff; }
+
+    /* progress bar */
+    .progress-wrap {
+      display: none;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .progress-wrap.active { display: block; }
+    .bar-filled { color: var(--blue); }
+    .bar-empty  { color: var(--dim); }
+    .bar-pct    { color: var(--text); margin-left: 6px; }
+
+    /* ── history block ── */
+    .history-block { margin-top: 2px; }
+    .section-label {
+      font-size: 10px;
+      color: var(--dim);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-label .clr {
+      color: var(--mid);
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .section-label .clr:hover { color: var(--text); }
+
+    .history-list {
+      max-height: 190px;
+      overflow-y: auto;
+    }
+    .history-list::-webkit-scrollbar { width: 2px; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .h-row {
+      font-size: 11px;
+      line-height: 1.9;
+      cursor: pointer;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    .h-row:hover { background: #111624; }
+
+    .h-time  { color: var(--dim); font-size: 10px; flex-shrink: 0; width: 52px; }
+    .h-name  { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      padding: 1px 4px;
+    }
+    .tag.ok     { color: var(--blue); }
+    .tag.threat { color: var(--red); }
+    .tag.warn   { color: var(--amber); }
+
+    /* expanded detail */
+    .h-detail {
+      display: none;
+      border-left: 2px solid var(--border);
+      margin: 2px 0 4px 58px;
+      padding-left: 10px;
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+    .h-row.open + .h-detail { display: block; }
+    .h-detail .tree-line { color: var(--mid); }
+    .h-detail .tree-line span { color: var(--text); }
+    .h-detail .tree-line.threat-name span { color: var(--red); }
+
+    .empty-msg {
+      color: var(--dim);
+      font-size: 11px;
+      padding: 6px 0;
+    }
+
+    /* ── command input ── */
+    .cmd-block {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+    .cmd-prompt { color: var(--blue); flex-shrink: 0; }
+    .cmd-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      flex: 1;
+      caret-color: var(--blue);
+    }
+    .cursor {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--blue);
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo"><span class="r">V</span>irus <span class="b">S</span>canner</div>
-            <span class="ver">v1.0</span>
-        </div>
-        
-        <div class="stats">
-            <div class="stat total">
-                <div class="num" id="totalCount">0</div>
-                <div class="lbl">Scanned</div>
-            </div>
-            <div class="stat safe">
-                <div class="num" id="cleanCount">0</div>
-                <div class="lbl">Clean</div>
-            </div>
-            <div class="stat danger">
-                <div class="num" id="threatCount">0</div>
-                <div class="lbl">Threats</div>
-            </div>
-        </div>
-        
-        <div class="btns">
-            <button class="btn blue" id="quickScan">Quick Scan</button>
-            <button class="btn grey" id="scanAll">Scan All</button>
-        </div>
-        
-        <div class="section-title">
-            <span>History</span>
-            <span id="clearHistory">Clear</span>
-        </div>
-        
-        <div class="history" id="historyList">
-            <div class="empty">No files scanned</div>
-        </div>
+
+  <!-- terminal body -->
+  <div class="term">
+
+    <!-- boot lines -->
+    <div class="boot">
+      <div>winters v1.0.0 — malware scanner engine</div>
+     
     </div>
-    
-    <script src="popup.js"></script>
+
+    <hr class="divider">
+
+    <!-- status -->
+    <div class="status-block">
+      <div class="status-row">
+        <span class="status-key">scanned</span>
+        <span class="status-val" id="statTotal">0</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">clean</span>
+        <span class="status-val blue" id="statClean">0</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">threats</span>
+        <span class="status-val red" id="statThreats">0</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- scan -->
+    <div class="scan-block">
+      <div class="prompt-line">
+        <span class="prompt-sym">❯</span>
+        <span class="prompt-cmd">winters scan --watch /Downloads</span>
+        <span class="run-link" id="runScan">run scan</span>
+      </div>
+      <div class="progress-wrap" id="progressWrap">
+        <span id="barFilled" class="bar-filled"></span><span id="barEmpty" class="bar-empty"></span><span class="bar-pct" id="barPct">0%</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- history -->
+    <div class="history-block">
+      <div class="section-label">
+        <span>winters history</span>
+        <span class="clr" id="clearHistory">clear</span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="empty-msg">no files scanned yet</div>
+      </div>
+    </div>
+
+    <!-- command input -->
+    <div class="cmd-block">
+      <span class="cmd-prompt">❯</span>
+      <input class="cmd-input" id="cmdInput" type="text" placeholder="scan · help · clear" autocomplete="off" spellcheck="false">
+      <span class="cursor"></span>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
